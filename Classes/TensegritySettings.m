@@ -1,7 +1,5 @@
 classdef TensegritySettings < matlab.mixin.SetGet
     %Třída obsahuje základní parametry úlohy
-    %Jednotlivé properties by to chtělo předělat na classy
-
     properties
         bars    bars
         cables  cables
@@ -12,6 +10,7 @@ classdef TensegritySettings < matlab.mixin.SetGet
     methods
         function obj = TensegritySettings(varargin)
             %% Nastaví hodnoty společné pro všechny úlohy
+            %Jedná se o vyplnění objektů tyčí, lan a rámů
             obj.inicialization();
             %% Možnost přepsání hodnot, které jsou například optimalizovány
             %Takto by vypadalo přepsání tuhosti lana
@@ -44,22 +43,28 @@ classdef TensegritySettings < matlab.mixin.SetGet
             obj.setCables();
             obj.setFrames();
         end
+        %Inicialization
         function setBars(obj)
+            %vlastnosti tyčí jsou uloženy v instanci objektu bars
             obj.bars = bars();
-            obj.bars.count = 6;
-            obj.bars.lengths =      ones(obj.bars.count,1)*0.3;
-            obj.bars.diameters =    ones(obj.bars.count,1)*0.01;
-            obj.bars.densitys =     ones(obj.bars.count,1)*3000;
+            obj.bars.count = 6;     %Počet tyčí
+            obj.bars.lengths =      ones(obj.bars.count,1)*0.3;         %Délky
+            obj.bars.diameters =    ones(obj.bars.count,1)*0.01;        %Průměry
+            obj.bars.densitys =     ones(obj.bars.count,1)*3000;        %Hustoty
+            %Hmotnové vlastnosti
             obj.bars.masses =   obj.bars.lengths.*obj.bars.diameters.^2/4.*obj.bars.densitys;
             obj.bars.inertias_x = 1/12*obj.bars.masses.*obj.bars.lengths.^2;
             obj.bars.inertias_y = obj.bars.inertias_x;
             obj.bars.inertias_z = obj.bars.masses.*(obj.bars.diameters/2).^2;
+            %Tabulka z do - pro vytvoření tabulky konektivity
             obj.bars.from_to = [1 4;...
                 2 5
                 3 6
                 7 11
                 8 12
                 9 10];
+            %Rozšíření - z historických důvodů, pokud se modeluje horní
+            %platforma jako tři tyče
             obj.bars.from_to_extended = [1 4;...
                 2 5
                 3 6
@@ -72,13 +77,15 @@ classdef TensegritySettings < matlab.mixin.SetGet
         end
         function setCables(obj)
             obj.cables = cables();
-            obj.cables.count = 18;
+            obj.cables.count = 18;  %Počet lan
             obj.cables.specific_stiffness = ones(obj.cables.count,1)*400;
             obj.cables.specific_dumpings = ones(obj.cables.count,1)*40;
             obj.cables.stiffness = ones(obj.cables.count,1)*25;
             obj.cables.dumpings = ones(obj.cables.count,1)*10;
+            %varialbe cables - zde se nastavuje, která lana jsou řízena
             obj.cables.variable_cables_indexes = [7,8,9,13,14,15];
             obj.cables.fixed_cables_indexes = setdiff(1:obj.cables.count, obj.cables.variable_cables_indexes,'sorted');
+            %Opět tabulka z do
             obj.cables.from_to = ...
                 [1 5    %1
                 1 7     %2
@@ -100,24 +107,28 @@ classdef TensegritySettings < matlab.mixin.SetGet
                 8 11];  %18
         end
         function setFrames(obj)
+            %Vlastnosti rámů
             obj.frames = frames();
-            obj.frames.radius_mid = 0.12;
-            obj.frames.rotation1 = -120;
-            obj.frames.rotation2 = -60;
+            obj.frames.radius_mid = 0.12;       %velikost kružnice středu
+            obj.frames.rotation1 = -120;        %O kolik je pootočena prostřední platforma vůči spodku
+            obj.frames.rotation2 = -60;         %O kolik je pootočena horní platforma
+            %Počet uzlů:
             obj.frames.nodes_count = max([obj.bars.from_to(:);obj.cables.from_to(:)]);
+            %Pevné uzly jsou zde hlavně z historických důvodů
             obj.frames.fixed_nodes = zeros(1,obj.frames.nodes_count);
             obj.frames.fixed_nodes([1,2,3]) = [1,1,1];
+            %Layers shift je posun mezi dolní a horní částí tensegrity
             obj.frames.layers_shift = 0.05;
-
+            %Zde jsou jen tloušťky platforem
             obj.frames.width_bot = 0.005;
             obj.frames.width_top = 0.005;
+            %A poloměry základen
             obj.frames.radius_bot = 0.1;
             obj.frames.radius_top = 0.1;
             obj.frames.type = 1;
-            
-
         end
         function initialNodesGuess(obj)
+            %Do obj.nodes vyplňí počáteční polohu uzlů
             obj.nodes = zeros(3,max(obj.bars.from_to(:)));
             %Bot nodes
             obj.nodes(1:2,1) = obj.frames.radius_bot*obj.angle2vector(0);
@@ -199,12 +210,14 @@ classdef TensegritySettings < matlab.mixin.SetGet
 
         function calculateConnectivityMatrixes(obj)
             %Matice konektivity pro tyče
-%             n = size(obj.bars.from_to,1);    %Celkem prvků
-%             m = obj.frames.nodes_count;        %Celkem uzlů
-%             C = zeros(n,m);
-%             for i = 1:n
-%                 C(i,:) = obj.e(from_to(i, 2), m) - obj.e(from_to(i, 1), m);
-%             end
+            n = size(obj.bars.from_to,1);       %Celkem prvků;
+            m = obj.frames.nodes_count;         %Celkem uzlů;
+            C = zeros(n,m);
+            for i = 1:n
+                C(i,:) = obj.e(obj.bars.from_to(i,2), m) - obj.e(obj.bars.from_to(i,1), m);
+            end
+            obj.bars.connectivity_matrix = C;
+            obj.bars.mid_points_connectivity_matrix = abs(C);
             %Matice konektivity pro lana
             n = size(obj.cables.from_to,1);  %Celkem prvků;
             m = obj.frames.nodes_count;      %Celkem uzlů;

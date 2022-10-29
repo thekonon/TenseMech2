@@ -16,6 +16,9 @@ classdef bars < matlab.mixin.SetGet
         alpha
         beta
         rotation_matrixes
+
+        connectivity_matrix
+        mid_points_connectivity_matrix
     end
     
     methods
