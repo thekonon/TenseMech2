@@ -26,9 +26,9 @@ classdef tenseMech<TensegritySettings
     end
     %Konstanty
     properties(Access = public,Constant)
-        time_stop = 0.15
-        alf = 100000
-        bet = 100000
+        time_stop = 1
+        alf = 500
+        bet = 500
         g = -9.81
     end
 
@@ -43,11 +43,12 @@ classdef tenseMech<TensegritySettings
             if nargin == 1
                 timeStop = obj.time_stop;
             end
-            [t, Y] = ode15s(@obj.calculateStepFK, [0, timeStop], [obj.s; obj.sd]);
+            options = odeset('RelTol',1e-4,'AbsTol',1e-5);
+            [t, Y] = ode15s(@obj.calculateStepFK, [0, timeStop], [obj.s; obj.sd],options);
             obj.Y_sim = Y;
             obj.t_sim = t;
             figure(1), clf,
-            for i = 1:1:numel(t)
+            for i = 1:1:numel(t)-1
                 obj.s = Y(i, 1:42)';
                 obj.stateToNodes()
                 obj.plotNodes
@@ -56,7 +57,7 @@ classdef tenseMech<TensegritySettings
                 ylim([-0.200 0.200])
                 zlim([-0.100 0.600])
                 view([-180.900 21.200])
-                pause(0.001)
+                pause(t(i+1)-t(i))
             end
         end
         function plotNodes(obj)
