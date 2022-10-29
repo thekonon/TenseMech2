@@ -27,8 +27,8 @@ classdef tenseMech<TensegritySettings
     %Konstanty
     properties(Access = public,Constant)
         time_stop = 0.15
-        alf = 1
-        bet = 1
+        alf = 100000
+        bet = 100000
         g = -9.81
     end
 
@@ -109,7 +109,7 @@ classdef tenseMech<TensegritySettings
             obj.calculateDeritiveOfJacobyMatrix()
             obj.calculateStringForces()
             obj.calculateConstrailResiduum()
-            disp("t: "+t)
+%             disp("t: "+t)
             obj.megaRightSideFK = [(obj.W+0*obj.Tc*obj.cable_forces); -(obj.PhiD*obj.sd+2*obj.alf*obj.Phi*obj.sd+obj.bet^2*obj.residuum)];
         end
         function calculateJacobiMatrix(obj)
