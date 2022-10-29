@@ -13,7 +13,7 @@ classdef tenseMech<TensegritySettings
     end
     
     methods
-        function obj = tenseMech(inputArg1,inputArg2)
+        function obj = tenseMech()
             obj@TensegritySettings()
         end
     end

@@ -188,7 +188,7 @@ classdef TensegritySettings < matlab.mixin.SetGet
             obj.frames.pzd = 0;
         end
     end
-    methods(Access = public) %Pomocné funkce
+    methods(Access = protected) %Pomocné funkce
         function vector = angle2vector(~, angle_d)
             vector = [cosd(angle_d), sind(angle_d)];
         end
