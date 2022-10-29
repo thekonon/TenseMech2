@@ -200,10 +200,10 @@ classdef TensegritySettings < matlab.mixin.SetGet
             Rx = @(phi)[1 0 0; 0 cos(phi) -sin(phi); 0 sin(phi) cos(phi)];
             Ry = @(phi)[cos(phi) 0 sin(phi); 0 1 0; -sin(phi) 0 cos(phi)];
 
-            alpha = atan2(dy,dz);
+            alpha = -atan2(dy,dz);
             beta = atan2(dx,sqrt(dy.^2+dz.^2));
 
-            R1 = Rx(-alpha);
+            R1 = Rx(alpha);
             R2 = Ry(beta);
             R = R1*R2;
         end
