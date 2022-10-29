@@ -26,9 +26,9 @@ classdef tenseMech<TensegritySettings
     end
     %Konstanty
     properties(Access = public,Constant)
-        time_stop = 0.15
-        alf = 100000
-        bet = 100000
+        time_stop = 3
+        alf = 500
+        bet = 500
         g = -9.81
     end
 
@@ -43,6 +43,7 @@ classdef tenseMech<TensegritySettings
             if nargin == 1
                 timeStop = obj.time_stop;
             end
+%             op
             [t, Y] = ode15s(@obj.calculateStepFK, [0, timeStop], [obj.s; obj.sd]);
             obj.Y_sim = Y;
             obj.t_sim = t;
@@ -52,10 +53,12 @@ classdef tenseMech<TensegritySettings
                 obj.stateToNodes()
                 obj.plotNodes
                 axis([-0.2 0.2 -0.2 0.2 -0.1 0.6])
-                xlim([-0.200 0.200])
-                ylim([-0.200 0.200])
-                zlim([-0.100 0.600])
+%                 xlim([-0.200 0.200])
+%                 ylim([-0.200 0.200])
+%                 zlim([-0.100 0.600])
                 view([-180.900 21.200])
+                zlim([-5.100 0.600])
+%                 view([-44.500 81.200])
                 pause(0.001)
             end
         end
@@ -109,7 +112,7 @@ classdef tenseMech<TensegritySettings
             obj.calculateDeritiveOfJacobyMatrix()
             obj.calculateStringForces()
             obj.calculateConstrailResiduum()
-%             disp("t: "+t)
+            disp("t: "+t)
             obj.megaRightSideFK = [(obj.W+0*obj.Tc*obj.cable_forces); -(obj.PhiD*obj.sd+2*obj.alf*obj.Phi*obj.sd+obj.bet^2*obj.residuum)];
         end
         function calculateJacobiMatrix(obj)
