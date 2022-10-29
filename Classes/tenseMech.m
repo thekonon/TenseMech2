@@ -1,7 +1,8 @@
 classdef tenseMech<TensegritySettings
     %Veřejné metody
     properties(Access = public)
-
+        Y_sim
+        t_sim
     end
     %Privátní metody
     properties(Access = private)
@@ -12,6 +13,8 @@ classdef tenseMech<TensegritySettings
         Tc
         cable_forces
         residuum
+        megaMatrixFK
+        megaRightSideFK
 
         nodes_velocity
 
@@ -19,10 +22,11 @@ classdef tenseMech<TensegritySettings
         %Stavové proměnné
         s
         sd
+
     end
     %Konstanty
     properties(Access = public,Constant)
-        time_stop = 0.1
+        time_stop = 0.15
         alf = 1
         bet = 1
         g = -9.81
@@ -33,14 +37,81 @@ classdef tenseMech<TensegritySettings
             obj@TensegritySettings()
             obj.initialConditionsToStates()
             obj.stateToNodes()
-            obj.calculateStringForces()
-            obj.calculateCablesTransformationMatrix()
-            obj.calculateDeritiveOfJacobyMatrix()
-            obj.calculateJacobiMatrix()
+            obj.solveFK()
+        end
+        function solveFK(obj, timeStop)
+            if nargin == 1
+                timeStop = obj.time_stop;
+            end
+            [t, Y] = ode15s(@obj.calculateStepFK, [0, timeStop], [obj.s; obj.sd]);
+            obj.Y_sim = Y;
+            obj.t_sim = t;
+            figure(1), clf,
+            for i = 1:1:numel(t)
+                obj.s = Y(i, 1:42)';
+                obj.stateToNodes()
+                obj.plotNodes
+                axis([-0.2 0.2 -0.2 0.2 -0.1 0.6])
+                xlim([-0.200 0.200])
+                ylim([-0.200 0.200])
+                zlim([-0.100 0.600])
+                view([-180.900 21.200])
+                pause(0.001)
+            end
+        end
+        function plotNodes(obj)
+            hold off
+            plot3(obj.nodes(1,:),obj.nodes(2,:),obj.nodes(3,:), '*')
+            hold on
+            for i = 1:obj.bars.count
+                mid_point = [obj.s(6*(i-1)+1);obj.s(6*(i-1)+2);obj.s(6*(i-1)+3)];
+                transform_matrix = obj.rMatrix()*obj.Tpx(obj.s(6*(i-1)+4))*obj.Tpy(obj.s(6*(i-1)+5));
+                plot3(mid_point(1), mid_point(2), mid_point(3), 'o')
+                point1 = mid_point+transform_matrix*[0;0;-obj.bars.lengths(i)/2;1];
+                point2 = mid_point+transform_matrix*[0;0; obj.bars.lengths(i)/2;1];
+                plot3([point1(1) point2(1)],[point1(2) point2(2)],[point1(3) point2(3)], 'Color','red');
+            end
+            transform_matrix = obj.rMatrix()*obj.Tpx(obj.s(end-2))*obj.Tpy(obj.s(end-1))*obj.Tpz(obj.s(end));
+            mid_point = obj.s(end-5:end-3);
+            points = zeros(3,3);
+            for i = 1:3
+                r_end_efector = obj.frames.radius_top*[obj.angle2vector(120*(i)+obj.frames.rotation2),0,1]';
+                points(:,i) = mid_point+transform_matrix*r_end_efector;
+            end
+            plot3([points(1,1) points(1,2)], [points(2,1) points(2,2)], [points(3,1) points(3,2)])
+            plot3([points(1,1) points(1,3)], [points(2,1) points(2,3)], [points(3,1) points(3,3)])
+            plot3([points(1,3) points(1,2)], [points(2,3) points(2,2)], [points(3,3) points(3,2)])
+
         end
     end
     %High tear
     methods(Access = private)
+        function YD = calculateStepFK(obj, t, Y)
+            obj.s = Y(1:42,1);
+            obj.sd = Y(43:end,1);
+            obj.stateToNodes()
+            obj.calculateMegaMatrixFK()
+            obj.calculateRightSideVectorFK(t)
+
+            res = obj.megaMatrixFK\obj.megaRightSideFK;
+            YD = [obj.sd; res(1:42)];
+            %disp("Reakce: "+norm(res(43:end)))
+            clc
+        end
+        function calculateMegaMatrixFK(obj)
+            obj.calculateMassMatrix()
+            obj.calculateJacobiMatrix()
+            obj.megaMatrixFK = [obj.M, obj.Phi';obj.Phi, zeros(18,18)];
+        end
+        function calculateRightSideVectorFK(obj,t)
+            obj.calculateConstantVector()
+            obj.calculateCablesTransformationMatrix()
+            obj.calculateDeritiveOfJacobyMatrix()
+            obj.calculateStringForces()
+            obj.calculateConstrailResiduum()
+            disp("t: "+t)
+            obj.megaRightSideFK = [(obj.W+0*obj.Tc*obj.cable_forces); -(obj.PhiD*obj.sd+2*obj.alf*obj.Phi*obj.sd+obj.bet^2*obj.residuum)];
+        end
         function calculateJacobiMatrix(obj)
             %Vazbové rovnice se píší pro dva typy připojení -
             %1) rám - tyč
