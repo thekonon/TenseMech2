@@ -25,13 +25,16 @@ classdef tenseMech<TensegritySettings
     methods(Access = public)
         function obj = tenseMech()
             obj@TensegritySettings()
+            old_nodes = obj.nodes;
+            obj.initialConditionsToStates()
+            obj.stateToNodes()
         end
     end
     %High tear
     methods(Access = private)
         
     end
-    %Med tear
+    %Mid tear
     methods(Access = private)
         function phi = barDeritive(obj, phix, phiy, phiz, phixd, phiyd, phizd, dir, bar_number)
             %Vrátí gradient polohy koncového bodu tyče - grad(midPoint+TpxTpyTpz*r)
@@ -98,6 +101,35 @@ classdef tenseMech<TensegritySettings
             velocity_from_y_rotation = obj.rMatrix()*obj.Tpx(phix)*obj.Tpy(phiy)*obj.DTpy(phiyd)*obj.Tpz(phiz)*r;
             velocity_from_z_rotation = obj.rMatrix()*obj.Tpx(phix)*obj.Tpy(phiy)*obj.Tpz(phiz)*obj.DTpz(phizd)*r;
             velocity = [vx;vy;vz]+velocity_from_x_rotation+velocity_from_y_rotation+velocity_from_z_rotation;
+        end
+        %přepočty
+        function initialConditionsToStates(obj)
+            obj.s = zeros(6*(obj.bars.count+1),1);
+            obj.sd = zeros(6*(obj.bars.count+1),1);
+            %Počáteční podmínky pro tyče
+            for i = 1:obj.bars.count
+                obj.s(6*(i-1)+(1:6),1) = [reshape(obj.bars.mid_points(:,i),[],1);
+                    obj.bars.alpha(i);
+                    obj.bars.beta(i);
+                    0];
+                obj.sd((i-1)+(1:6),1) = zeros(6,1);
+            end
+            i = 7;
+            %Počáteční podmínky pro end efektor
+            obj.s(6*(i-1)+(1:6),1) = [obj.frames.x;obj.frames.y;obj.frames.z;
+                obj.frames.px;obj.frames.py;obj.frames.pz];
+            obj.sd(6*(i-1)+(1:6),1) = [obj.frames.xd;obj.frames.yd;obj.frames.zd;
+                obj.frames.pxd;obj.frames.pyd;obj.frames.pzd];
+        end
+        function stateToNodes(obj)
+            for current_bar_index = 1:obj.bars.count
+                nodes_cols = obj.bars.from_to(current_bar_index,:);
+                current_s = obj.s(6*(current_bar_index-1)+(1:6));
+                position = current_s(1:3);
+                r = [0;0;obj.bars.lengths(current_bar_index)/2;1];
+                obj.nodes(:,nodes_cols(1)) = position+obj.rMatrix()*obj.Tpx(current_s(4))*obj.Tpy(current_s(5))*(-r);
+                obj.nodes(:,nodes_cols(2)) = position+obj.rMatrix()*obj.Tpx(current_s(4))*obj.Tpy(current_s(5))*(r);
+            end
         end
     end
     %Low tear
