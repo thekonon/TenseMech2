@@ -78,10 +78,10 @@ classdef TensegritySettings < matlab.mixin.SetGet
         function setCables(obj)
             obj.cables = cables();
             obj.cables.count = 18;  %Počet lan
-            obj.cables.specific_stiffness = ones(obj.cables.count,1)*400;
-            obj.cables.specific_dumpings = ones(obj.cables.count,1)*40;
-            obj.cables.stiffness = ones(obj.cables.count,1)*25;
-            obj.cables.dumpings = ones(obj.cables.count,1)*10;
+            obj.cables.specific_stiffness = ones(obj.cables.count,1)*10;
+            obj.cables.specific_dumpings = ones(obj.cables.count,1)*10;
+            obj.cables.stiffness = ones(obj.cables.count,1)*2;
+            obj.cables.dumpings = ones(obj.cables.count,1)*2;
             %varialbe cables - zde se nastavuje, která lana jsou řízena
             obj.cables.variable_cables_indexes = [7,8,9,13,14,15];
             obj.cables.fixed_cables_indexes = setdiff(1:obj.cables.count, obj.cables.variable_cables_indexes,'sorted');

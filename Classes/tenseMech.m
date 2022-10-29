@@ -26,7 +26,7 @@ classdef tenseMech<TensegritySettings
     end
     %Konstanty
     properties(Access = public,Constant)
-        time_stop = 1
+        time_stop = 0.3
         alf = 500
         bet = 500
         g = -9.81
@@ -57,6 +57,7 @@ classdef tenseMech<TensegritySettings
                 ylim([-0.200 0.200])
                 zlim([-0.100 0.600])
                 view([-180.900 21.200])
+                title("time t: "+t(i))
                 pause(t(i+1)-t(i))
             end
         end
@@ -111,7 +112,18 @@ classdef tenseMech<TensegritySettings
             obj.calculateStringForces()
             obj.calculateConstrailResiduum()
 %             disp("t: "+t)
-            obj.megaRightSideFK = [(obj.W+0*obj.Tc*obj.cable_forces); -(obj.PhiD*obj.sd+2*obj.alf*obj.Phi*obj.sd+obj.bet^2*obj.residuum)];
+            c1=0;
+            if t < 0.05
+                c2 = 0.1;
+            else
+                c2 = 0;
+            end
+%             if norm(obj.residuum)<0.01
+                c1 = min(0.3, t^2);
+%             else
+%                 disp("Oh no")
+%             end
+            obj.megaRightSideFK = [(c2*obj.W+c1*obj.Tc*obj.cable_forces); -(obj.PhiD*obj.sd+2*obj.alf*obj.Phi*obj.sd+obj.bet^2*obj.residuum)];
         end
         function calculateJacobiMatrix(obj)
             %Vazbové rovnice se píší pro dva typy připojení -
@@ -355,8 +367,7 @@ classdef tenseMech<TensegritySettings
         function velocity = nodeVelocity(obj, vx, vy, vz, phix, phiy, phiz, phixd, phiyd, phizd, dir, bar_number)
             %Vrátí rychlost uzlu
             r = [0;0;dir*obj.bars.lengths(bar_number)/2;1];
-            phix = -phix;
-            velocity_from_x_rotation = obj.rMatrix()*obj.Tpx(phix)*obj.DTpx(-phixd)*obj.Tpy(phiy)*obj.Tpz(phiz)*r;
+            velocity_from_x_rotation = obj.rMatrix()*obj.Tpx(phix)*obj.DTpx(phixd)*obj.Tpy(phiy)*obj.Tpz(phiz)*r;
             velocity_from_y_rotation = obj.rMatrix()*obj.Tpx(phix)*obj.Tpy(phiy)*obj.DTpy(phiyd)*obj.Tpz(phiz)*r;
             velocity_from_z_rotation = obj.rMatrix()*obj.Tpx(phix)*obj.Tpy(phiy)*obj.Tpz(phiz)*obj.DTpz(phizd)*r;
             velocity = [vx;vy;vz]+velocity_from_x_rotation+velocity_from_y_rotation+velocity_from_z_rotation;
