@@ -26,7 +26,7 @@ classdef tenseMech<TensegritySettings
     end
     %Konstanty
     properties(Access = public,Constant)
-        time_stop = 0.3
+        time_stop = 1
         alf = 500
         bet = 500
         g = -9.81
@@ -44,7 +44,7 @@ classdef tenseMech<TensegritySettings
                 timeStop = obj.time_stop;
             end
             options = odeset('RelTol',1e-4,'AbsTol',1e-5);
-            [t, Y] = ode15s(@obj.calculateStepFK, [0, timeStop], [obj.s; obj.sd],options);
+            [t, Y] = ode15s(@obj.stepFK, [0, timeStop], [obj.s; obj.sd],options);
             obj.Y_sim = Y;
             obj.t_sim = t;
             figure(1), clf,
@@ -88,29 +88,33 @@ classdef tenseMech<TensegritySettings
     end
     %High tear
     methods(Access = private)
-        function YD = calculateStepFK(obj, t, Y)
+        function YD = stepFK(obj, t, Y)
             obj.s = Y(1:42,1);
             obj.sd = Y(43:end,1);
             obj.stateToNodes()
-            obj.calculateMegaMatrixFK()
-            obj.calculateRightSideVectorFK(t)
+            obj.matrixFK()
+            obj.vectorFK(t)
 
             res = obj.megaMatrixFK\obj.megaRightSideFK;
             YD = [obj.sd; res(1:42)];
             %disp("Reakce: "+norm(res(43:end)))
             clc
         end
-        function calculateMegaMatrixFK(obj)
-            obj.calculateMassMatrix()
-            obj.calculateJacobiMatrix()
+        function matrixFK(obj)
+            if isempty(obj.M)
+                obj.massMatrix()
+            end
+            obj.jacobiMatrix()
             obj.megaMatrixFK = [obj.M, obj.Phi';obj.Phi, zeros(18,18)];
         end
-        function calculateRightSideVectorFK(obj,t)
-            obj.calculateConstantVector()
-            obj.calculateCablesTransformationMatrix()
-            obj.calculateDeritiveOfJacobyMatrix()
-            obj.calculateStringForces()
-            obj.calculateConstrailResiduum()
+        function vectorFK(obj,t)
+            if isempty(obj.W)
+                obj.constantVector()
+            end
+            obj.cablesTransformationMatrix()
+            obj.deritiveOfJacobyMatrix()
+            obj.stringForces()
+            obj.constrainResiduum()
 %             disp("t: "+t)
             c1=0;
             if t < 0.05
@@ -125,7 +129,7 @@ classdef tenseMech<TensegritySettings
 %             end
             obj.megaRightSideFK = [(c2*obj.W+c1*obj.Tc*obj.cable_forces); -(obj.PhiD*obj.sd+2*obj.alf*obj.Phi*obj.sd+obj.bet^2*obj.residuum)];
         end
-        function calculateJacobiMatrix(obj)
+        function jacobiMatrix(obj)
             %Vazbové rovnice se píší pro dva typy připojení -
             %1) rám - tyč
             %   -tj. rovnice 1-9
@@ -150,11 +154,11 @@ classdef tenseMech<TensegritySettings
                 inputs = {obj.s(current_vars_indexes(4)),obj.s(current_vars_indexes(5)), 0, 1, 1, 1};
                 phi(current_eq_indexes, current_vars_indexes) = obj.barDeritive(inputs{:},1,i);
                 %Pro endefektor se musí přidat extra výrazy
-                phi(current_eq_indexes, end-5:end) = phiEndEfectorDeritive(obj, (i-3));
+                phi(current_eq_indexes, end-5:end) = -phiEndEfectorDeritive(obj, (i-3));
             end
             obj.Phi = phi;
         end
-        function calculateDeritiveOfJacobyMatrix(obj)
+        function deritiveOfJacobyMatrix(obj)
             %Derivace jakobiánu vazbových rovnice se píší pro dva typy připojení -
             %1) rám - tyč
             %   -tj. rovnice 1-9
@@ -199,7 +203,7 @@ classdef tenseMech<TensegritySettings
             end
             obj.PhiD = phid;
         end
-        function calculateCablesTransformationMatrix(obj)
+        function cablesTransformationMatrix(obj)
             %Transformační matice pro výpočet sil na tělesa od lan
             %Prerekvizity: statesToNodes
             %Cílem je vytvořit matici Tc takovou, že platí:
@@ -245,12 +249,12 @@ classdef tenseMech<TensegritySettings
                 end
             end
         end
-        function calculateStringForces(obj)
+        function stringForces(obj)
             %Vypočítá absolutní velikost síly v lanech
             %Prerekvizity: stateToNodes, calculateNodesVelocities
             %Z toho co je na generátoru vychází, že délky paralelních
             %pružin jsou větší, resp normální volné délky jsou o 5% kratší
-            obj.calculateNodesVelocities()
+            obj.nodesVelocities()
             l = sqrt(sum((obj.nodes*obj.cables.connectivity_matrix').^2));
             obj.cable_forces = zeros(18,1);
             for i = 1 : 18
@@ -269,7 +273,7 @@ classdef tenseMech<TensegritySettings
                 obj.cable_forces(i) = -(ksi*dli/l0i+Kpi*dlpi+bsi/l0i*vi+Bpi*vi);
             end
         end
-        function calculateConstrailResiduum(obj)
+        function constrainResiduum(obj)
             residuum = zeros(3*6,1);
             for i = 1:3 %i - aktuálně řešená tyč
                 current_vars_indexes = 6*(i-1)+(1:6);
@@ -288,7 +292,7 @@ classdef tenseMech<TensegritySettings
             end
             obj.residuum = residuum;
         end
-        function calculateNodesVelocities(obj)
+        function nodesVelocities(obj)
             obj.nodes_velocity = zeros(3,obj.frames.nodes_count);
             velocities = zeros(3, obj.frames.nodes_count);
             for i = 1:6
@@ -374,7 +378,7 @@ classdef tenseMech<TensegritySettings
         end
 
         %Konstantní matice / vektory
-        function calculateMassMatrix(obj)
+        function massMatrix(obj)
             %Vypočítá matici hmotnosti
             %Prerekvizity: nic
             vector = zeros(1,(obj.bars.count+1)*6);
@@ -384,7 +388,7 @@ classdef tenseMech<TensegritySettings
             end
             obj.M((end-5):end,(end-5):end) = diag([obj.bars.masses(i)*3*ones(3,1); 0.01*ones(3,1)]);
         end
-        function calculateConstantVector(obj)
+        function constantVector(obj)
             %Vypočítá tíhové síly
             %Pro horní platformu je hmotnost dána trojnásobkem tyčí
             %Prerekvizity: nic
