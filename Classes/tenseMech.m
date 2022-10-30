@@ -26,7 +26,7 @@ classdef tenseMech<TensegritySettings
     end
     %Konstanty
     properties(Access = public,Constant)
-        time_stop = 1
+        time_stop = 1.5
         alf = 500
         bet = 500
         g = -9.81
@@ -118,12 +118,12 @@ classdef tenseMech<TensegritySettings
 %             disp("t: "+t)
             c1=0;
             if t < 0.05
-                c2 = 0.1;
+                c2 = 0;
             else
                 c2 = 0;
             end
 %             if norm(obj.residuum)<0.01
-                c1 = min(0.3, t^2);
+                c1 = min(0.1, t^2);
 %             else
 %                 disp("Oh no")
 %             end
@@ -199,7 +199,7 @@ classdef tenseMech<TensegritySettings
                     obj.sd(6*(i-1)+6)};
                 phid(current_eq_indexes, current_vars_indexes) = obj.barDeritiveD(inputs{:},1,i);
                 %Pro endefektor se musí přidat extra výrazy
-                phid(current_eq_indexes, end-5:end) = phiEndEfectorDeritiveD(obj, (i-3));
+                phid(current_eq_indexes, end-5:end) = -phiEndEfectorDeritiveD(obj, (i-3));
             end
             obj.PhiD = phid;
         end
