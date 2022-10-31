@@ -113,7 +113,7 @@ classdef tenseMech<TensegritySettings
                 obj.constantVector()
             end
             obj.cablesTransformationMatrix()
-            obj.deritiveOfJacobyMatrix()
+            obj.deritiveOfJacobiMatrix()
             obj.stringForces()
             obj.constrainResiduum()
 %             disp("t: "+t)
@@ -155,7 +155,7 @@ classdef tenseMech<TensegritySettings
             end
             obj.Phi = phi;
         end
-        function deritiveOfJacobyMatrix(obj)
+        function deritiveOfJacobiMatrix(obj)
             %Derivace jakobiánu vazbových rovnice se píší pro dva typy připojení -
             %1) rám - tyč
             %   -tj. rovnice 1-9
@@ -348,9 +348,6 @@ classdef tenseMech<TensegritySettings
             phix = obj.s(end-2);
             phiy = obj.s(end-1);
             phiz = obj.s(end);
-            xd = obj.sd(end-5);
-            yd = obj.sd(end-4);
-            zd = obj.sd(end-3);
             phixd = obj.sd(end-2);
             phiyd = obj.sd(end-1);
             phizd = obj.sd(end);
