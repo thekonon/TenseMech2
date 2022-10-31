@@ -26,9 +26,9 @@ classdef tenseMech<TensegritySettings
     end
     %Konstanty
     properties(Access = public,Constant)
-        time_stop = 1.5
-        alf = 500
-        bet = 500
+        time_stop = 2
+        alf = 50
+        bet = 50
         g = -9.81
     end
 
@@ -52,11 +52,12 @@ classdef tenseMech<TensegritySettings
                 obj.s = Y(i, 1:42)';
                 obj.stateToNodes()
                 obj.plotNodes
-                axis([-0.2 0.2 -0.2 0.2 -0.1 0.6])
                 xlim([-0.200 0.200])
                 ylim([-0.200 0.200])
-                zlim([-0.100 0.600])
-                view([-180.900 21.200])
+                zlim([-0.600 0.600])
+%                 view([-180.900 21.200]) %normální pohled
+%                 view([-180.049 90.000]) %pohled dolu
+                view([-171.539 51.652]) %poled dolu menší
                 title("time t: "+t(i))
                 pause(t(i+1)-t(i))
             end
@@ -120,13 +121,13 @@ classdef tenseMech<TensegritySettings
             if t < 0.05
                 c2 = 0;
             else
-                c2 = 0;
+                c2 = 1;
             end
-%             if norm(obj.residuum)<0.01
-                c1 = min(0.1, t^2);
-%             else
-%                 disp("Oh no")
-%             end
+            if norm(obj.residuum)<0.01
+                c1 = min(0.2, t^2)*0;
+            else
+                disp("Oh no")
+            end
             obj.megaRightSideFK = [(c2*obj.W+c1*obj.Tc*obj.cable_forces); -(obj.PhiD*obj.sd+2*obj.alf*obj.Phi*obj.sd+obj.bet^2*obj.residuum)];
         end
         function jacobiMatrix(obj)
