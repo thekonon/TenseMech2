@@ -26,10 +26,10 @@ classdef tenseMech<TensegritySettings
     end
     %Konstanty
     properties(Access = public,Constant)
-        time_stop = 2
-        alf = 50
-        bet = 50
-        g = -9.81
+        time_stop = 5
+        alf = 1
+        bet = 1
+        g = -9.81*0
     end
 
     methods(Access = public)
@@ -55,9 +55,9 @@ classdef tenseMech<TensegritySettings
                 xlim([-0.200 0.200])
                 ylim([-0.200 0.200])
                 zlim([-0.600 0.600])
-%                 view([-180.900 21.200]) %normální pohled
+                view([-180.900 21.200]) %normální pohled
 %                 view([-180.049 90.000]) %pohled dolu
-                view([-171.539 51.652]) %poled dolu menší
+%                 view([-171.539 51.652]) %poled dolu menší
                 title("time t: "+t(i))
                 pause(t(i+1)-t(i))
             end
@@ -118,15 +118,11 @@ classdef tenseMech<TensegritySettings
             obj.constrainResiduum()
 %             disp("t: "+t)
             c1=0;
-            if t < 0.05
-                c2 = 0;
+            c2=1;
+            if norm(obj.residuum)<0.1
+                c1 = min(1, 0.1*t^2);
             else
-                c2 = 1;
-            end
-            if norm(obj.residuum)<0.01
-                c1 = min(0.2, t^2)*0;
-            else
-                disp("Oh no")
+                disp("Oh no t: "+t)
             end
             obj.megaRightSideFK = [(c2*obj.W+c1*obj.Tc*obj.cable_forces); -(obj.PhiD*obj.sd+2*obj.alf*obj.Phi*obj.sd+obj.bet^2*obj.residuum)];
         end
@@ -280,8 +276,9 @@ classdef tenseMech<TensegritySettings
                 current_vars_indexes = 6*(i-1)+(1:6);
                 current_eq_indexes = 3*(i-1)+(1:3);
                 inputs = obj.s(current_vars_indexes);
+                ri = [obj.frames.radius_bot*obj.angle2vector((i-1)*120), 0]';
                 residuum(current_eq_indexes) =[inputs(1:3)] + obj.rMatrix()*obj.Tpx(inputs(4))*obj.Tpy(inputs(5))*obj.Tpz(inputs(6))*[0;0;-obj.bars.lengths(i)/2;1]...
-                    -obj.nodes(:,i);
+                    -ri;
             end
             for i = 4:6 %i - aktuálně řešená tyč
                 current_vars_indexes = 6*(i-1)+(1:6);
@@ -343,7 +340,7 @@ classdef tenseMech<TensegritySettings
             phiD6 = obj.Tpx(phix)*obj.DTpx(phixd)*obj.Tpy(phiy)*obj.Tpz(phiz)*obj.DTpz(1)*r+...
                 obj.Tpx(phix)*obj.Tpy(phiy)*obj.DTpy(phiyd)*obj.Tpz(phiz)*obj.DTpz(1)*r+...
                 obj.Tpx(phix)*obj.Tpy(phiy)*obj.Tpz(phiz)*obj.DTpz(phizd)*obj.DTpz(1)*r;
-            phiD = [diag([xd,yd,zd]), phiD4(1:3),phiD5(1:3), phiD6(1:3)];
+            phiD = [zeros(3), phiD4(1:3),phiD5(1:3), phiD6(1:3)];
         end
         function phiD = phiEndEfectorDeritiveD(obj, point_number)
             %Point number - číslo rohu range 1-3
@@ -366,7 +363,7 @@ classdef tenseMech<TensegritySettings
             phiD6 = obj.Tpx(phix)*obj.DTpx(phixd)*obj.Tpy(phiy)*obj.Tpz(phiz)*obj.DTpz(1)*r+...
                 obj.Tpx(phix)*obj.Tpy(phiy)*obj.DTpy(phiyd)*obj.Tpz(phiz)*obj.DTpz(1)*r+...
                 obj.Tpx(phix)*obj.Tpy(phiy)*obj.Tpz(phiz)*obj.DTpz(phizd)*obj.DTpz(1)*r;
-            phiD = [diag([xd,yd,zd]), phiD4(1:3),phiD5(1:3), phiD6(1:3)];
+            phiD = [zeros(3), phiD4(1:3),phiD5(1:3), phiD6(1:3)];
             obj.PhiD = phiD;
         end
         function velocity = nodeVelocity(obj, vx, vy, vz, phix, phiy, phiz, phixd, phiyd, phizd, dir, bar_number)
