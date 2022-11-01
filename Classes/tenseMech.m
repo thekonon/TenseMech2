@@ -26,9 +26,9 @@ classdef tenseMech<TensegritySettings
     end
     %Konstanty
     properties(Access = public,Constant)
-        time_stop = 0.5
-        alf = 1
-        bet = 1
+        time_stop = 10
+        alf = 2
+        bet = 2
         g = -9.81/10
     end
 
@@ -46,12 +46,14 @@ classdef tenseMech<TensegritySettings
             if nargin == 1
                 timeStop = obj.time_stop;
             end
-            options = odeset('RelTol',1e-4,'AbsTol',1e-5);
+            options = odeset('RelTol',1e-4,'AbsTol',1e-5,'MaxStep',0.01);
+            tic
             [t, Y] = ode15s(@obj.stepFK, [0, timeStop], [obj.s; obj.sd],options);
+            fprintf('Simulace dojela za: %.2f s\n', toc)
             obj.Y_sim = Y;
             obj.t_sim = t;
             figure(1), clf,
-            for i = 1:1:numel(t)-1
+            for i = 1:ceil(numel(t)/1000):numel(t)-1
                 obj.s = Y(i, 1:42)';
                 obj.stateToNodes()
                 obj.plotNodes
@@ -93,17 +95,21 @@ classdef tenseMech<TensegritySettings
     %High tear
     methods(Access = private)
         function YD = stepFK(obj, t, Y)
-%             if t>0.1
-                disp("t: "+t)
-%             end
+            waitbar(t/obj.time_stop)
             obj.s = Y(1:42,1);
             obj.sd = Y(43:end,1);
+            obj.s(6*(1:6)) = zeros(6,1);
+            obj.sd(6*(1:6)) = zeros(6,1);
             obj.stateToNodes()
             obj.matrixFK()
             obj.vectorFK(t)
-
+            obj.megaMatrixFK(6*(1:6),:) = [];
+            obj.megaMatrixFK(:,6*(1:6)) = [];
+            obj.megaRightSideFK(6*(1:6)) = [];
             res = obj.megaMatrixFK\obj.megaRightSideFK;
             YD = [obj.sd; res(1:42)];
+            YD(6*(1:6)) = zeros(6,1);
+            YD(6*(1:6)+42) = zeros(6,1);
             %disp("Reakce: "+norm(res(43:end)))
             clc
         end
@@ -126,8 +132,7 @@ classdef tenseMech<TensegritySettings
             c1=0;
             c2=1;
             if norm(obj.residuum)<0.1
-                c1 = min(1, 0.1*t^2);
-                c1 = 1 ;
+                c1 = min(1, t);
             else
                 disp("Oh no t: "+t)
             end
@@ -258,24 +263,24 @@ classdef tenseMech<TensegritySettings
                 current_nodes_indexes = obj.cables.from_to(i,:);
                 vi = obj.nodes_velocity(:,current_nodes_indexes(1));
                 vj = obj.nodes_velocity(:,current_nodes_indexes(2));
-                v(i) = -dot(cable_vectors(:,i)/norm(cable_vectors(:,i)), vi-vj);
+                v(i) = dot(cable_vectors(:,i)/norm(cable_vectors(:,i)), vj-vi);
             end
 
             l = sqrt(sum((cable_vectors).^2));
             obj.cable_forces = zeros(18,1);
             for i = 1 : 18
                 li = l(i);
-                l0i = obj.cables.free_length(i);
-                l0pi = obj.cables.free_length(i);
+                l0i = obj.cables.free_length(i)*0.99;
+                l0pi = obj.cables.free_length(i)*0.9;
                 dli = (li-l0i);
                 dlpi = (li-l0pi);
                 ksi = obj.cables.specific_stiffness(i);
                 Kpi = obj.cables.stiffness(i);
-                vi = v(i)/100;
+                vi = v(i);
                 bsi = obj.cables.specific_dumpings(i);
                 Bpi = obj.cables.dumpings(i);
-                if dli < 0; dli = 0; end
-                if dlpi < 0; dlpi = 0; end
+                if dli < 0; dli = 0; bsi = 0; end
+                if dlpi < 0; dlpi = 0; Bpi = 0; end
                 obj.cable_forces(i) = -(ksi*dli/l0i+Kpi*dlpi+bsi/l0i*vi+Bpi*vi);
             end
         end
