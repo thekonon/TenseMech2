@@ -26,10 +26,10 @@ classdef tenseMech<TensegritySettings
     end
     %Konstanty
     properties(Access = public,Constant)
-        time_stop = 5
-        alf = 1
-        bet = 1
-        g = -9.81*0
+        time_stop = 1
+        alf = 0
+        bet = 0
+        g = -9.81
     end
 
     methods(Access = public)
@@ -37,6 +37,7 @@ classdef tenseMech<TensegritySettings
             obj@TensegritySettings()
             obj.initialConditionsToStates()
             obj.stateToNodes()
+            %             obj.symbolicProof()
             obj.solveFK()
         end
         function solveFK(obj, timeStop)
@@ -56,8 +57,8 @@ classdef tenseMech<TensegritySettings
                 ylim([-0.200 0.200])
                 zlim([-0.600 0.600])
                 view([-180.900 21.200]) %normální pohled
-%                 view([-180.049 90.000]) %pohled dolu
-%                 view([-171.539 51.652]) %poled dolu menší
+                %                 view([-180.049 90.000]) %pohled dolu
+                %                 view([-171.539 51.652]) %poled dolu menší
                 title("time t: "+t(i))
                 pause(t(i+1)-t(i))
             end
@@ -116,7 +117,7 @@ classdef tenseMech<TensegritySettings
             obj.deritiveOfJacobiMatrix()
             obj.stringForces()
             obj.constrainResiduum()
-%             disp("t: "+t)
+            %             disp("t: "+t)
             c1=0;
             c2=1;
             if norm(obj.residuum)<0.1
@@ -169,12 +170,9 @@ classdef tenseMech<TensegritySettings
             for i = 1:3 %i - aktuálně řešená tyč
                 current_vars_indexes = 6*(i-1)+(1:6);
                 current_eq_indexes = 3*(i-1)+(1:3);
-                inputs = {obj.bars.alpha(i),...
-                    obj.bars.beta(i),...
-                    0,...
-                    obj.sd(6*(i-1)+1),...
-                    obj.sd(6*(i-1)+2),...
-                    obj.sd(6*(i-1)+3),...
+                inputs = {obj.s(6*(i-1)+4),...
+                    obj.s(6*(i-1)+5),...
+                    obj.s(6*(i-1)+6),...
                     obj.sd(6*(i-1)+4),...
                     obj.sd(6*(i-1)+5),...
                     obj.sd(6*(i-1)+6)};
@@ -185,12 +183,9 @@ classdef tenseMech<TensegritySettings
                 current_vars_indexes = 6*(i-1)+(1:6);
                 current_eq_indexes = 3*(i-1)+(1:3);
                 %Pro tyče zůstávají
-                inputs = {obj.bars.alpha(i),...
-                    obj.bars.beta(i),...
-                    0,...
-                    obj.sd(6*(i-1)+1),...
-                    obj.sd(6*(i-1)+2),...
-                    obj.sd(6*(i-1)+3),...
+                inputs = {obj.s(6*(i-1)+4),...
+                    obj.s(6*(i-1)+5),...
+                    obj.s(6*(i-1)+6),...
                     obj.sd(6*(i-1)+4),...
                     obj.sd(6*(i-1)+5),...
                     obj.sd(6*(i-1)+6)};
@@ -306,6 +301,24 @@ classdef tenseMech<TensegritySettings
                 velocities(:, obj.bars.from_to(i,2)) = obj.nodeVelocity(inputs{:}, 1, i);
             end
         end
+        function symbolicProof(obj)
+            syms x y z phix phiy phixt(t) phiyt(t) phiz phizt(t)
+            mysym = [x;y;z;1]+obj.Tpx(phix)*obj.Tpy(phiy)*obj.Tpz(phiz)*[0;0;obj.bars.lengths(1)/2;1];
+            dmysym = jacobian(mysym, [x,y,z,phix, phiy, phiz]);
+            ddmysym = diff(subs(dmysym, [phix, phiy, phiz], [phixt, phiyt, phizt]),t);
+            J_deritive = ddmysym;
+            ins = [1,1,1,1,1,1];
+            inputs = num2cell(ins);
+            ddmysymsub = subs(ddmysym, diff([phix, phiy, phiz, phixt, phiyt, phizt]), ins);
+            myres = obj.barDeritive();
+            myres2 = obj.barDeritiveD();
+            double(ddmysymsub)
+
+            %             ddmysymsub = subs(ddmysym, diff(phixt,t), 1);
+            %             ddmysymsub = subs(ddmysymsub, diff(phiyt,t), 1);
+            %             ddmysymsub = subs(ddmysymsub, phixt(t), pi/6);
+            %             ddmysymsub = subs(ddmysymsub, phiyt(t), pi/6);
+        end
     end
     %Mid tear
     methods(Access = private)
@@ -328,7 +341,7 @@ classdef tenseMech<TensegritySettings
                 obj.rMatrix()*obj.Tpx(phix)*obj.Tpy(phiy)*obj.DTpy(1)*obj.Tpz(phiz)*r,...
                 obj.rMatrix()*obj.Tpx(phix)*obj.Tpy(phiy)*obj.Tpz(phiz)*obj.DTpz(1)*r];
         end
-        function phiD = barDeritiveD(obj, phix, phiy, phiz, xd, yd, zd, phixd, phiyd, phizd, dir, bar_number)
+        function phiD = barDeritiveD(obj, phix, phiy, phiz, phixd, phiyd, phizd, dir, bar_number)
             %phizd neimplementováno
             r = [0;0;dir*obj.bars.lengths(bar_number)/2;1];
             phiD4 = obj.Tpx(phix)*obj.DTpx(phixd)*obj.DTpx(1)*obj.Tpy(phiy)*obj.Tpz(phiz)*r+...
