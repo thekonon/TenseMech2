@@ -26,10 +26,10 @@ classdef tenseMech<TensegritySettings
     end
     %Konstanty
     properties(Access = public,Constant)
-        time_stop = 1
-        alf = 0
-        bet = 0
-        g = -9.81
+        time_stop = 0.5
+        alf = 1
+        bet = 1
+        g = -9.81/10
     end
 
     methods(Access = public)
@@ -37,7 +37,9 @@ classdef tenseMech<TensegritySettings
             obj@TensegritySettings()
             obj.initialConditionsToStates()
             obj.stateToNodes()
-            %             obj.symbolicProof()
+%             obj.nodesVelocities()
+%             obj.stringForces()
+            %obj.symbolicProof()
             obj.solveFK()
         end
         function solveFK(obj, timeStop)
@@ -55,7 +57,7 @@ classdef tenseMech<TensegritySettings
                 obj.plotNodes
                 xlim([-0.200 0.200])
                 ylim([-0.200 0.200])
-                zlim([-0.600 0.600])
+                zlim([-0.100 0.600])
                 view([-180.900 21.200]) %normální pohled
                 %                 view([-180.049 90.000]) %pohled dolu
                 %                 view([-171.539 51.652]) %poled dolu menší
@@ -91,6 +93,9 @@ classdef tenseMech<TensegritySettings
     %High tear
     methods(Access = private)
         function YD = stepFK(obj, t, Y)
+%             if t>0.1
+                disp("t: "+t)
+%             end
             obj.s = Y(1:42,1);
             obj.sd = Y(43:end,1);
             obj.stateToNodes()
@@ -122,6 +127,7 @@ classdef tenseMech<TensegritySettings
             c2=1;
             if norm(obj.residuum)<0.1
                 c1 = min(1, 0.1*t^2);
+                c1 = 1 ;
             else
                 disp("Oh no t: "+t)
             end
@@ -243,11 +249,19 @@ classdef tenseMech<TensegritySettings
         end
         function stringForces(obj)
             %Vypočítá absolutní velikost síly v lanech
-            %Prerekvizity: stateToNodes, calculateNodesVelocities
-            %Z toho co je na generátoru vychází, že délky paralelních
-            %pružin jsou větší, resp normální volné délky jsou o 5% kratší
+            %Prerekvizity: stateToNodes, nodesVelocities
             obj.nodesVelocities()
-            l = sqrt(sum((obj.nodes*obj.cables.connectivity_matrix').^2));
+            cable_vectors = obj.nodes*obj.cables.connectivity_matrix';
+            %Výpočet rychlosti napínání lan:
+            v = zeros(obj.cables.count, 1);
+            for i = 1:obj.cables.count
+                current_nodes_indexes = obj.cables.from_to(i,:);
+                vi = obj.nodes_velocity(:,current_nodes_indexes(1));
+                vj = obj.nodes_velocity(:,current_nodes_indexes(2));
+                v(i) = -dot(cable_vectors(:,i)/norm(cable_vectors(:,i)), vi-vj);
+            end
+
+            l = sqrt(sum((cable_vectors).^2));
             obj.cable_forces = zeros(18,1);
             for i = 1 : 18
                 li = l(i);
@@ -257,7 +271,7 @@ classdef tenseMech<TensegritySettings
                 dlpi = (li-l0pi);
                 ksi = obj.cables.specific_stiffness(i);
                 Kpi = obj.cables.stiffness(i);
-                vi = 0;
+                vi = v(i)/100;
                 bsi = obj.cables.specific_dumpings(i);
                 Bpi = obj.cables.dumpings(i);
                 if dli < 0; dli = 0; end
@@ -286,7 +300,7 @@ classdef tenseMech<TensegritySettings
             obj.residuum = residuum;
         end
         function nodesVelocities(obj)
-            obj.nodes_velocity = zeros(3,obj.frames.nodes_count);
+            %do obj.nodes_velocity zapíše rychlost uzlů ve formátu 3x nodes
             velocities = zeros(3, obj.frames.nodes_count);
             for i = 1:6
                 current_vars_indexes = 6*(i-1)+(1:6);
@@ -300,6 +314,7 @@ classdef tenseMech<TensegritySettings
                 %Horní části tyče
                 velocities(:, obj.bars.from_to(i,2)) = obj.nodeVelocity(inputs{:}, 1, i);
             end
+            obj.nodes_velocity = velocities;
         end
         function symbolicProof(obj)
             syms x y z phix phiy phixt(t) phiyt(t) phiz phizt(t)
