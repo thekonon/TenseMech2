@@ -26,10 +26,10 @@ classdef tenseMech<TensegritySettings
     end
     %Konstanty
     properties(Access = public,Constant)
-        time_stop = 10
-        alf = 2
-        bet = 2
-        g = -9.81/10
+        time_stop = 1
+        alf = 1
+        bet = 1
+        g = -9.81/1000
     end
 
     methods(Access = public)
@@ -107,9 +107,10 @@ classdef tenseMech<TensegritySettings
             obj.megaMatrixFK(:,6*(1:6)) = [];
             obj.megaRightSideFK(6*(1:6)) = [];
             res = obj.megaMatrixFK\obj.megaRightSideFK;
-            YD = [obj.sd; res(1:42)];
-            YD(6*(1:6)) = zeros(6,1);
-            YD(6*(1:6)+42) = zeros(6,1);
+            res_sds = [reshape(res(1:35), 5, []);[zeros(1,6), res(36)]];
+            YD = [obj.sd; res_sds(:)];
+%             YD(6*(1:6)) = zeros(6,1);
+%             YD(6*(1:6)+42) = zeros(6,1);
             %disp("Reakce: "+norm(res(43:end)))
             clc
         end
@@ -132,7 +133,7 @@ classdef tenseMech<TensegritySettings
             c1=0;
             c2=1;
             if norm(obj.residuum)<0.1
-                c1 = min(1, t);
+                c1 = min(1, t*10);
             else
                 disp("Oh no t: "+t)
             end
@@ -270,8 +271,8 @@ classdef tenseMech<TensegritySettings
             obj.cable_forces = zeros(18,1);
             for i = 1 : 18
                 li = l(i);
-                l0i = obj.cables.free_length(i)*0.99;
-                l0pi = obj.cables.free_length(i)*0.9;
+                l0i = obj.cables.free_length(i)*0.95;
+                l0pi = obj.cables.free_length(i);
                 dli = (li-l0i);
                 dlpi = (li-l0pi);
                 ksi = obj.cables.specific_stiffness(i);
