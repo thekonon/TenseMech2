@@ -1,4 +1,4 @@
-classdef tenseMech<TensegritySettings
+classdef tenseMech < TensegritySettings
     %Veřejné metody
     properties(Access = public)
         Y_sim
@@ -27,8 +27,8 @@ classdef tenseMech<TensegritySettings
     %Konstanty
     properties(Access = public,Constant)
         time_stop = 1
-        alf = 1
-        bet = 1
+        alf = 10
+        bet = 10
         g = -9.81/1000
     end
 
@@ -271,13 +271,13 @@ classdef tenseMech<TensegritySettings
             obj.cable_forces = zeros(18,1);
             for i = 1 : 18
                 li = l(i);
-                l0i = obj.cables.free_length(i)*0.95;
+                l0i = obj.cables.free_length(i);
                 l0pi = obj.cables.free_length(i);
                 dli = (li-l0i);
                 dlpi = (li-l0pi);
                 ksi = obj.cables.specific_stiffness(i);
                 Kpi = obj.cables.stiffness(i);
-                vi = v(i);
+                vi = v(i)/10;
                 bsi = obj.cables.specific_dumpings(i);
                 Bpi = obj.cables.dumpings(i);
                 if dli < 0; dli = 0; bsi = 0; end
