@@ -161,6 +161,8 @@ classdef TensegritySettings < handle
 
             %Natočení tyčí
             obj.bars.rotation_matrixes = zeros(3,3,obj.bars.count);
+            obj.bars.alpha = zeros(obj.bars.count,1);
+            obj.bars.beta = zeros(obj.bars.count,1);
             for i = 1:obj.bars.count
                 [alpha,beta,rotation_matrix] = obj.transformationMatrix(coresponding_nodes_bars(:, 2*i-1),coresponding_nodes_bars(:, 2*i));
                 obj.bars.alpha(i) = alpha;

@@ -17,18 +17,19 @@ classdef basic_system < matlab.System
 
     % Pre-computed constants
     properties (Access = private)
-
+        current_tenseMech
     end
 
     methods (Access = protected)
         function setupImpl(obj)
             % Perform one-time calculations, such as computing constants
-            R = TensegritySettings();
+            obj.current_tenseMech = tenseMech();
         end
 
         function ydd = stepImpl(obj,u,y,yd)
             % Implement algorithm. Calculate y as a function of input u and
             % discrete states.
+            disp(u)
             ydd = -(obj.k*y+obj.b*yd+u)/obj.m;
         end
 

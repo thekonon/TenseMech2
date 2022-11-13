@@ -40,7 +40,7 @@ classdef tenseMech < TensegritySettings
 %             obj.nodesVelocities()
 %             obj.stringForces()
             %obj.symbolicProof()
-            obj.solveFK()
+%             obj.solveFK()
         end
         function solveFK(obj, timeStop)
             if nargin == 1
@@ -93,7 +93,7 @@ classdef tenseMech < TensegritySettings
         end
     end
     %High tear
-    methods(Access = private)
+    methods(Access = public)
         function YD = stepFK(obj, t, Y)
             waitbar(t/obj.time_stop)
             obj.s = Y(1:42,1);
