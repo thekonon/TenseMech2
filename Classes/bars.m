@@ -1,4 +1,4 @@
-classdef bars < matlab.mixin.SetGet
+classdef bars
    %Acts like a container
     properties
         count

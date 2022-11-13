@@ -1,4 +1,4 @@
-classdef TensegritySettings < matlab.mixin.SetGet
+classdef TensegritySettings < handle
     %Třída obsahuje základní parametry úlohy
     properties
         bars    bars
