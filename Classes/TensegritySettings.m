@@ -146,8 +146,8 @@ classdef TensegritySettings < handle
             obj.nodes(1:2,11) = obj.frames.radius_top*obj.angle2vector(120+obj.frames.rotation2);
             obj.nodes(1:2,12) = obj.frames.radius_top*obj.angle2vector(240+obj.frames.rotation2);
 
-            height_first_floor = sqrt(obj.bars.lengths(1)^2 - sumsqr(diff(obj.nodes(1:2,obj.bars.from_to(1,:))')));
-            height_second_floor = sqrt(obj.bars.lengths(1)^2 - sumsqr(diff(obj.nodes(1:2,obj.bars.from_to(end,:))')));
+            height_first_floor = sqrt(obj.bars.lengths(1)^2 - sum(diff(obj.nodes(1:2,obj.bars.from_to(1,:))').^2));
+            height_second_floor = sqrt(obj.bars.lengths(1)^2 - sum(diff(obj.nodes(1:2,obj.bars.from_to(end,:))').^2));
 
             obj.nodes(3,:) = repelem([0,...     první patro
                 height_first_floor,...      druhé patro
@@ -160,6 +160,7 @@ classdef TensegritySettings < handle
             obj.bars.mid_points = (coresponding_nodes_bars(:,1:2:end)+coresponding_nodes_bars(:,2:2:end))/2;
 
             %Natočení tyčí
+            obj.bars.rotation_matrixes = zeros(3,3,obj.bars.count);
             for i = 1:obj.bars.count
                 [alpha,beta,rotation_matrix] = obj.transformationMatrix(coresponding_nodes_bars(:, 2*i-1),coresponding_nodes_bars(:, 2*i));
                 obj.bars.alpha(i) = alpha;

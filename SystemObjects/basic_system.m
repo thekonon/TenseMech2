@@ -23,6 +23,7 @@ classdef basic_system < matlab.System
     methods (Access = protected)
         function setupImpl(obj)
             % Perform one-time calculations, such as computing constants
+            R = TensegritySettings();
         end
 
         function ydd = stepImpl(obj,u,y,yd)
