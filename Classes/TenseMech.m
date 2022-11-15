@@ -1,4 +1,4 @@
-classdef tenseMech < TensegritySettings
+classdef TenseMech < TensegritySettings
     %Poznámky:
     %Proměnné chce navrhovat tak, aby měli konstatní rozměr - pro code ge
     %Celé toto chce předělat
@@ -36,7 +36,7 @@ classdef tenseMech < TensegritySettings
     end
 
     methods(Access = public)
-        function obj = tenseMech()
+        function obj = TenseMech()
             obj@TensegritySettings()
             obj.initialConditionsToStates()
             obj.stateToNodes()
