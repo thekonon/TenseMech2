@@ -1,2 +1,2 @@
 addpath("Classes\")
-myMech = tenseMech();
+myMech = TenseMech();
