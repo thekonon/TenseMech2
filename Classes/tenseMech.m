@@ -26,7 +26,7 @@ classdef tenseMech<TensegritySettings
     end
     %Konstanty
     properties(Access = public,Constant)
-        time_stop = 1
+        time_stop = 0.3
         alf = 1
         bet = 1
         g = -9.81/1000
@@ -40,7 +40,8 @@ classdef tenseMech<TensegritySettings
 %             obj.nodesVelocities()
 %             obj.stringForces()
             %obj.symbolicProof()
-            obj.solveFK()
+%             obj.solveFK()
+            obj.Y_sim = [obj.s; obj.sd];
         end
         function solveFK(obj, timeStop)
             if nargin == 1
@@ -91,28 +92,67 @@ classdef tenseMech<TensegritySettings
             plot3([points(1,3) points(1,2)], [points(2,3) points(2,2)], [points(3,3) points(3,2)])
 
         end
+        function nodes = plotNodes2(obj, nodes, s)
+            hold off
+            plot3(nodes(1,:),nodes(2,:),nodes(3,:), '*')
+            hold on
+            for i = 1:obj.bars.count
+                mid_point = [s(6*(i-1)+1);s(6*(i-1)+2);s(6*(i-1)+3)];
+                transform_matrix = obj.rMatrix()*obj.Tpx(s(6*(i-1)+4))*obj.Tpy(s(6*(i-1)+5));
+                plot3(mid_point(1), mid_point(2), mid_point(3), 'o')
+                point1 = mid_point+transform_matrix*[0;0;-obj.bars.lengths(i)/2;1];
+                point2 = mid_point+transform_matrix*[0;0; obj.bars.lengths(i)/2;1];
+                plot3([point1(1) point2(1)],[point1(2) point2(2)],[point1(3) point2(3)], 'Color','red');
+            end
+            transform_matrix = obj.rMatrix()*obj.Tpx(s(end-2))*obj.Tpy(s(end-1))*obj.Tpz(s(end));
+            mid_point = s(end-5:end-3);
+            points = zeros(3,3);
+            for i = 1:3
+                r_end_efector = obj.frames.radius_top*[obj.angle2vector(120*(i)+obj.frames.rotation2),0,1]';
+                points(:,i) = mid_point+transform_matrix*r_end_efector;
+            end
+            plot3([points(1,1) points(1,2)], [points(2,1) points(2,2)], [points(3,1) points(3,2)])
+            plot3([points(1,1) points(1,3)], [points(2,1) points(2,3)], [points(3,1) points(3,3)])
+            plot3([points(1,3) points(1,2)], [points(2,3) points(2,2)], [points(3,3) points(3,2)])
+        end
+        function plotStates(obj, states, time)
+            for i = 1:ceil(numel(time)/1000):numel(time)-1
+                s = states(i, 1:42)';
+                nodes = obj.stateToNodes2(s);
+                obj.plotNodes2(nodes, s);
+                xlim([-0.200 0.200])
+                ylim([-0.200 0.200])
+                zlim([-0.100 0.600])
+                view([-180.900 21.200]) %normální pohled
+                %view([-180.049 90.000]) %pohled dolu
+                %view([-171.539 51.652]) %poled dolu menší
+                title("time t: "+time(i))
+                pause(time(i+1)-time(i))
+            end
+        end
     end
     %High tear
-    methods(Access = private)
+    methods(Access = public)
         function YD = stepFK(obj, t, Y)
-            waitbar(t/obj.time_stop)
-            obj.s = Y(1:42,1);
-            obj.sd = Y(43:end,1);
-            obj.s(6*(1:6)) = zeros(6,1);
-            obj.sd(6*(1:6)) = zeros(6,1);
-            obj.stateToNodes()
-            obj.matrixFK()
-            obj.vectorFK(t)
-            obj.megaMatrixFK(6*(1:6),:) = [];
-            obj.megaMatrixFK(:,6*(1:6)) = [];
-            obj.megaRightSideFK(6*(1:6)) = [];
-            res = obj.megaMatrixFK\obj.megaRightSideFK;
-            res_sds = [reshape(res(1:35), 5, []);[zeros(1,6), res(36)]];
-            YD = [obj.sd; res_sds(:)];
-%             YD(6*(1:6)) = zeros(6,1);
-%             YD(6*(1:6)+42) = zeros(6,1);
-            %disp("Reakce: "+norm(res(43:end)))
-            clc
+            if norm(Y) ~= 0
+                waitbar(t/obj.time_stop)
+                obj.s = Y(1:42,1);
+                obj.sd = Y(43:end,1);
+                obj.s(6*(1:6)) = zeros(6,1);
+                obj.sd(6*(1:6)) = zeros(6,1);
+                obj.stateToNodes()
+                obj.matrixFK()
+                obj.vectorFK(t)
+                obj.megaMatrixFK(6*(1:6),:) = [];
+                obj.megaMatrixFK(:,6*(1:6)) = [];
+                obj.megaRightSideFK(6*(1:6)) = [];
+                res = obj.megaMatrixFK\obj.megaRightSideFK;
+                res_sds = [reshape(res(1:35), 5, []);[zeros(1,6), res(36)]];
+                YD = [obj.sd; res_sds(:)];
+                %             YD(6*(1:6)) = zeros(6,1);
+                %             YD(6*(1:6)+42) = zeros(6,1);
+                %disp("Reakce: "+norm(res(43:end)))
+            end
         end
         function matrixFK(obj)
             if isempty(obj.M)
@@ -453,6 +493,17 @@ classdef tenseMech<TensegritySettings
                 r = [0;0;obj.bars.lengths(current_bar_index)/2;1];
                 obj.nodes(:,nodes_cols(1)) = position+obj.rMatrix()*obj.Tpx(current_s(4))*obj.Tpy(current_s(5))*(-r);
                 obj.nodes(:,nodes_cols(2)) = position+obj.rMatrix()*obj.Tpx(current_s(4))*obj.Tpy(current_s(5))*(r);
+            end
+        end
+        function nodes = stateToNodes2(obj, state)
+            nodes = zeros(3,obj.frames.nodes_count);
+            for current_bar_index = 1:obj.bars.count
+                nodes_cols = obj.bars.from_to(current_bar_index,:);
+                current_s = state(6*(current_bar_index-1)+(1:6));
+                position = current_s(1:3);
+                r = [0;0;obj.bars.lengths(current_bar_index)/2;1];
+                nodes(:,nodes_cols(1)) = position+obj.rMatrix()*obj.Tpx(current_s(4))*obj.Tpy(current_s(5))*(-r);
+                nodes(:,nodes_cols(2)) = position+obj.rMatrix()*obj.Tpx(current_s(4))*obj.Tpy(current_s(5))*(r);
             end
         end
     end
