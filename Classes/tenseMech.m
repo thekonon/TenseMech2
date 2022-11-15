@@ -1,4 +1,7 @@
 classdef tenseMech < TensegritySettings
+    %Poznámky:
+    %Proměnné chce navrhovat tak, aby měli konstatní rozměr - pro code ge
+    %Celé toto chce předělat
     %Veřejné metody
     properties(Access = public)
         Y_sim
@@ -6,10 +9,10 @@ classdef tenseMech < TensegritySettings
     end
     %Privátní metody
     properties(Access = private)
-        M
-        Phi
-        PhiD
-        W
+        M = zeros(42)
+        Phi = zeros(3*6, 6*7)
+        PhiD = zeros(3*6, 6*7)
+        W = zeros(42,1)
         Tc
         cable_forces
         residuum
@@ -91,11 +94,13 @@ classdef tenseMech < TensegritySettings
             plot3([points(1,3) points(1,2)], [points(2,3) points(2,2)], [points(3,3) points(3,2)])
 
         end
+        function full_state = getState(obj)
+            full_state = reshape([obj.s, obj.sd],[],1);
+        end
     end
     %High tear
     methods(Access = public)
         function YD = stepFK(obj, t, Y)
-            waitbar(t/obj.time_stop)
             obj.s = Y(1:42,1);
             obj.sd = Y(43:end,1);
             obj.s(6*(1:6)) = zeros(6,1);
@@ -411,9 +416,10 @@ classdef tenseMech < TensegritySettings
             %Vypočítá matici hmotnosti
             %Prerekvizity: nic
             vector = zeros(1,(obj.bars.count+1)*6);
+            obj.M = zeros(42);
             for i = 1 : obj.bars.count
                 vector(6*(i-1)+1:(6*(i-1))+6) = [obj.bars.masses(i)*ones(1,3), obj.bars.inertias_x(i), obj.bars.inertias_y(i), obj.bars.inertias_z(i)];
-                obj.M = diag(vector);
+                obj.M(:,:) = diag(vector);
             end
             obj.M((end-5):end,(end-5):end) = diag([obj.bars.masses(i)*3*ones(3,1); 0.01*ones(3,1)]);
         end
@@ -421,9 +427,9 @@ classdef tenseMech < TensegritySettings
             %Vypočítá tíhové síly
             %Pro horní platformu je hmotnost dána trojnásobkem tyčí
             %Prerekvizity: nic
-            obj.W = zeros(6,7);
-            obj.W(3,:) = [reshape(obj.bars.masses,1,[]), obj.bars.masses(1)*3]*(obj.g);
-            obj.W = obj.W(:);
+            w = zeros(6,7);
+            w(3,:) = [reshape(obj.bars.masses,1,[]), obj.bars.masses(1)*3]*(obj.g);
+            obj.W = w(:);
         end
 
         %Přepočty
