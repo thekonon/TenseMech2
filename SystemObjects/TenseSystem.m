@@ -8,7 +8,7 @@ classdef TenseSystem < matlab.System
 
     % Public, non-tunable properties
     properties (Nontunable)
-
+        
     end
 
     properties (DiscreteState)
@@ -17,7 +17,8 @@ classdef TenseSystem < matlab.System
 
     % Pre-computed constants
     properties (Access = private)
-        testClass TestClass
+        tenseMech TenseMech
+        output_size
     end
 
     methods
@@ -25,7 +26,10 @@ classdef TenseSystem < matlab.System
         function obj = TenseSystem(varargin)
             % Support name-value pair arguments when constructing object
             setProperties(obj,nargin,varargin{:})
-            obj.testClass = TestClass(1,2);
+            
+            %Inicializace tenseMech
+            obj.tenseMech = TenseMech();
+            obj.output_size = obj.tenseMech.getOutputSize();
         end
     end
 
@@ -35,11 +39,11 @@ classdef TenseSystem < matlab.System
             % Perform one-time calculations, such as computing constants
         end
 
-        function [y, p] = stepImpl(obj,u)
+        function y = stepImpl(obj,u)
             % Implement algorithm. Calculate y as a function of input u and
             % discrete states.
-            y = obj.testClass.Property1*u;
-            p = obj.testClass.Property1;
+            y = zeros(obj.output_size);
+            y(:) = obj.tenseMech.alf;
         end
 
         function resetImpl(obj)
@@ -97,5 +101,12 @@ classdef TenseSystem < matlab.System
             % configuration, for the command line and System block dialog
             flag = false;
         end
+        function [flag1] = isOutputFixedSizeImpl(obj)
+            flag1 = true;
+        end
+        function Size = getOutputSizeImpl(obj)
+            Size = [6,1];
+        end
+        
     end
 end

@@ -1,4 +1,4 @@
-classdef TensegritySettings < matlab.System
+classdef TensegritySettings
     %Třída obsahuje základní parametry úlohy
     properties (Access = protected)
         bars    bars
@@ -11,7 +11,7 @@ classdef TensegritySettings < matlab.System
         function obj = TensegritySettings(varargin)
             %% Nastaví hodnoty společné pro všechny úlohy
             %Jedná se o vyplnění objektů tyčí, lan a rámů
-            setProperties(obj,nargin,varargin{:})
+%             setProperties(obj,nargin,varargin{:})
             obj.inicialization();
             %% Možnost přepsání hodnot, které jsou například optimalizovány
             %Takto by vypadalo přepsání tuhosti lana

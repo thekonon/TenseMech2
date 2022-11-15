@@ -34,7 +34,15 @@ classdef TenseMech < TensegritySettings
         bet = 10
         g = -9.81/1000
     end
-
+    %Public data methody
+    methods(Access = public)
+        function Size = getOutputSize(obj)
+            Size = [6, 1];
+        end
+        function bars_lenghts = getBarsL(obj)
+            bars_lenghts = obj.bars.lengths;
+        end
+    end
     methods(Access = public)
         function obj = TenseMech()
             obj@TensegritySettings()
@@ -42,7 +50,7 @@ classdef TenseMech < TensegritySettings
             obj.stateToNodes()
 %             obj.nodesVelocities()
 %             obj.stringForces()
-            %obj.symbolicProof()
+%             obj.symbolicProof()
 %             obj.solveFK()
         end
         function solveFK(obj, timeStop)
@@ -521,5 +529,6 @@ classdef TenseMech < TensegritySettings
             rM = [eye(3), zeros(3,1)];
         end
     end
+    
 end
 
